@@ -6,25 +6,31 @@ from re import sub
 
 class DownloadCBRF:
     """
-    Скачиваются все курсы валют на текущий момент с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
+    Скачиваются все курсы валют на текущий момент на одну единицу
+    с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
     """
 
     def __init__(self):
-        self.__list_cb_rf = self.__get_cb_rf()
-        self.__json_cb_rf = dumps(self.__get_cb_rf(), indent=4, ensure_ascii=False)
+        self._list_cb_rf = self._get_cb_rf()
+        self._json_cb_rf = dumps(self._get_cb_rf(), indent=4, ensure_ascii=False)
 
     def __str__(self):
         return """
-        Скачиваются все курсы валют на текущий момент с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
+        Скачиваются все курсы валют на текущий момент на одну единицу
+        с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
         """
 
     def __repr__(self):
         return """
-        Скачиваются все курсы валют на текущий момент с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
+        Скачиваются все курсы валют на текущий момент на одну единицу
+        с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
+        
         
         методы:
         get_list_cb_rf - возвращает результат list
         get_json_cb_rf - возвращает результат в формате json
+        get_list_cb_rf_sort - возвращает отсортированный результат list
+        get_json_cb_rf_sort - возвращает отсортированный результат в формате json
         get_numbers_codes - возвращает numbers_codes
         get_names - возвращает names
         get_alphas_codes - возвращает alphas_codes
@@ -33,7 +39,7 @@ class DownloadCBRF:
         """
 
     @classmethod
-    def __get_cb_rf(cls) -> list:
+    def _get_cb_rf(cls) -> list:
         """
         Скачиваются все курсы валют на текущий момент с официального сайта ЦБ РФ https://www.cbr.ru/currency_base/daily/
         :rtype list
@@ -95,6 +101,10 @@ class DownloadCBRF:
             name = name.text
             value = float(sub(r',', r'.', value.text))
 
+            if ed > 1:
+                value /= ed
+                ed = 1
+
             result.append(dict(
                 number_code=number_code,
                 alpha_code=alpha_code,
@@ -106,33 +116,77 @@ class DownloadCBRF:
         return result
 
     def get_list_cb_rf(self) -> list:
-        return self.__list_cb_rf
+        return self._list_cb_rf
 
     def get_json_cb_rf(self) -> str:
-        return self.__json_cb_rf
+        return self._json_cb_rf
+
+    def get_list_cb_rf_sort(self, sort: bool = False) -> list:
+        """
+        :param sort: Если True, то сортировка по убыванию, если False(по-умолчанию) сортировка по возрастанию
+        """
+        return self._sort(self._list_cb_rf, sort)
+
+    def get_json_cb_rf_sort(self, sort: bool = False) -> str:
+        """
+        :param sort: Если True, то сортировка по убыванию, если False(по-умолчанию) сортировка по возрастанию
+        """
+        result = self._sort(self._list_cb_rf, sort)
+
+        return dumps(result, indent=4, ensure_ascii=False)
+
+    @classmethod
+    def _sort(cls, list_numbers: list, sort_decrease: bool = False):
+        """
+        Сортировка по курсу валют
+        :param list_numbers:  сортируемый список
+        :param sort_decrease: Если True, то сортировка по убыванию, если False(по-умолчанию) сортировка по возрастанию
+        :return:
+        """
+        if len(list_numbers) < 2:
+            return list_numbers
+
+        min_list = list()
+        max_list = list()
+        reference_list = [list_numbers[0]]
+        reference = list_numbers[0]
+
+        for element in list_numbers[1:]:
+
+            if element.get('value') > reference.get('value'):
+                max_list.append(element)
+            elif element.get('value') < reference.get('value'):
+                min_list.append(element)
+            else:
+                reference_list.append(element)
+
+        if sort_decrease:
+            return cls._sort(max_list, sort_decrease) + reference_list + cls._sort(min_list, sort_decrease)
+        else:
+            return cls._sort(min_list, sort_decrease) + reference_list + cls._sort(max_list, sort_decrease)
 
     def get_numbers_codes(self) -> list:
-        return [number.get('number_code') for number in self.__list_cb_rf]
+        return [number.get('number_code') for number in self._list_cb_rf]
 
     def get_alphas_codes(self) -> list:
-        return [number.get('alpha_code') for number in self.__list_cb_rf]
+        return [number.get('alpha_code') for number in self._list_cb_rf]
 
     def get_eds(self) -> list:
-        return [number.get('ed') for number in self.__list_cb_rf]
+        return [number.get('ed') for number in self._list_cb_rf]
 
     def get_names(self) -> list:
-        return [number.get('name') for number in self.__list_cb_rf]
+        return [number.get('name') for number in self._list_cb_rf]
 
     def get_values(self) -> list:
         """
         :return:
         """
-        return [number.get('value') for number in self.__list_cb_rf]
+        return [number.get('value') for number in self._list_cb_rf]
 
 
 def main():
-    cb = CBRF()
-    print(cb.__doc__)
+    cb = DownloadCBRF()
+    print(cb.get_json_cb_rf_sort())
 
 
 if __name__ == "__main__":
